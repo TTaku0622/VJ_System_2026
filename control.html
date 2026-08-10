@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <title>VJ 操作画面</title>
+    <script src="js/statusBus.js"></script>
+    <style>
+        /* 暗いブースで離れて見るので、背景は黒・文字は大きく・彩度は低めに */
+        :root {
+            --bg: #0a0a0c;
+            --panel: #16161a;
+            --line: #2c2c33;
+            --text: #e8e8ec;
+            --dim: #82828e;
+            --on: #4ade80;
+            --off: #3a3a42;
+            --warn: #f87171;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            padding: 20px;
+            display: grid;
+            gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            align-content: start;
+            min-height: 100vh;
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 16px 18px;
+        }
+
+        .card h2 {
+            margin: 0 0 12px;
+            font-size: 11px;
+            letter-spacing: .14em;
+            font-weight: 600;
+            color: var(--dim);
+            text-transform: uppercase;
+        }
+
+        /* 現在のシーンは一番大きく。ちらっと見て分かることが最優先 */
+        .headline {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 22px;
+            flex-wrap: wrap;
+        }
+
+        .big-key {
+            font-size: 62px;
+            font-weight: 700;
+            line-height: 1;
+            min-width: 78px;
+            text-align: center;
+            padding: 10px 4px;
+            border: 2px solid var(--line);
+            border-radius: 12px;
+        }
+
+        .headline-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .headline-main {
+            font-size: 26px;
+            font-weight: 600;
+        }
+
+        .headline-sub {
+            color: var(--dim);
+            font-size: 13px;
+        }
+
+        .spacer {
+            margin-left: auto;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+            padding: 5px 0;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .row:last-child {
+            border-bottom: 0;
+        }
+
+        .row .label {
+            color: var(--dim);
+        }
+
+        .row .value {
+            font-weight: 600;
+            text-align: right;
+            word-break: break-all;
+        }
+
+        /* 加工モードの一覧。今どれが選ばれているかを塗りで示す */
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .chip {
+            display: flex;
+            align-items: baseline;
+            gap: 7px;
+            padding: 7px 11px;
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            color: var(--dim);
+        }
+
+        .chip .k {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .chip.active {
+            background: var(--text);
+            border-color: var(--text);
+            color: var(--bg);
+        }
+
+        .chip.on {
+            border-color: var(--on);
+            color: var(--on);
+        }
+
+        /* 音のメーター */
+        .meter {
+            display: grid;
+            grid-template-columns: 52px 1fr 42px;
+            align-items: center;
+            gap: 10px;
+            padding: 4px 0;
+        }
+
+        .meter .name {
+            color: var(--dim);
+        }
+
+        .meter .track {
+            height: 10px;
+            background: var(--off);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .meter .fill {
+            height: 100%;
+            width: 0%;
+            background: var(--on);
+            border-radius: 5px;
+            transition: width .06s linear;
+        }
+
+        .meter .num {
+            text-align: right;
+            color: var(--dim);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--off);
+            margin-right: 7px;
+            vertical-align: middle;
+        }
+
+        .status-dot.ok {
+            background: var(--on);
+        }
+
+        .status-dot.ng {
+            background: var(--warn);
+        }
+
+        .warn {
+            color: var(--warn);
+        }
+
+        /* 出力ウィンドウからの更新が途切れたら全面で知らせる */
+        #offline {
+            grid-column: 1 / -1;
+            display: none;
+            padding: 18px 20px;
+            border: 1px solid var(--warn);
+            border-radius: 10px;
+            color: var(--warn);
+            line-height: 1.8;
+        }
+
+        body.disconnected #offline {
+            display: block;
+        }
+
+        body.disconnected .card,
+        body.disconnected .headline {
+            opacity: .35;
+        }
+    </style>
+</head>
+
+<body class="disconnected">
+    <div id="offline">
+        <strong>出力ウィンドウから状態が届いていません。</strong>
+        <span style="color:var(--dim)">よくある原因は次の3つ。</span><br />
+        <br />
+        1. <strong>出力ウィンドウが裏に隠れている</strong>（一番多い）。ブラウザは見えていない
+        ウィンドウの描画を止めるので、出力が動かず状態も送られない。<br />
+        <span style="color:var(--dim)">→ この画面と出力ウィンドウを重ねず、別々のディスプレイに置く。</span><br />
+        2. VJ 本体（<code>index.html</code>）を開いていない。<br />
+        3. <strong>オリジンが違う。</strong><code>localhost:5502</code> と
+        <code>127.0.0.1:5503</code> は別物なので、両方を同じ URL で開くこと。
+    </div>
+
+    <div class="headline">
+        <div class="big-key" id="scene-key">-</div>
+        <div class="headline-text">
+            <div class="headline-main" id="scene-name">—</div>
+            <div class="headline-sub" id="scene-sub">出力待ち</div>
+        </div>
+        <div class="headline-text spacer">
+            <div class="headline-main" id="mode-label">—</div>
+            <div class="headline-sub" id="mode-sub">加工</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>カメラ</h2>
+        <div class="row">
+            <span class="label">状態</span>
+            <span class="value" id="cam-state"><span class="status-dot"></span>—</span>
+        </div>
+        <div class="row">
+            <span class="label">選択中</span>
+            <span class="value" id="cam-label">—</span>
+        </div>
+        <div class="row">
+            <span class="label">接続台数</span>
+            <span class="value" id="cam-count">—</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>加工モード</h2>
+        <div class="chips" id="mode-chips"></div>
+    </div>
+
+    <div class="card">
+        <h2>音</h2>
+        <div class="row">
+            <span class="label">入力</span>
+            <span class="value" id="audio-source">—</span>
+        </div>
+        <div class="meter"><span class="name">全体</span>
+            <div class="track">
+                <div class="fill" id="m-level"></div>
+            </div><span class="num" id="n-level">0</span>
+        </div>
+        <div class="meter"><span class="name">低域</span>
+            <div class="track">
+                <div class="fill" id="m-bass"></div>
+            </div><span class="num" id="n-bass">0</span>
+        </div>
+        <div class="meter"><span class="name">中域</span>
+            <div class="track">
+                <div class="fill" id="m-mid"></div>
+            </div><span class="num" id="n-mid">0</span>
+        </div>
+        <div class="meter"><span class="name">高域</span>
+            <div class="track">
+                <div class="fill" id="m-treble"></div>
+            </div><span class="num" id="n-treble">0</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>出力エフェクト</h2>
+        <div class="chips" id="fx-chips"></div>
+        <div class="row" style="margin-top:12px">
+            <span class="label">画面分割</span>
+            <span class="value" id="tile">なし</span>
+        </div>
+        <div class="row">
+            <span class="label">クロスフェード</span>
+            <span class="value" id="fade">OFF</span>
+        </div>
+        <div class="row">
+            <span class="label">fps</span>
+            <span class="value" id="fps">—</span>
+        </div>
+    </div>
+
+    <script>
+        const bus = new StatusBus();
+        const $ = (id) => document.getElementById(id);
+
+        // 更新が途切れたら「未接続」に落とす。出力側は毎秒15回送ってくる
+        const OFFLINE_AFTER = 1000;
+        let lastUpdate = 0;
+
+        bus.onUpdate(render);
+        setInterval(() => {
+            document.body.classList.toggle('disconnected', Date.now() - lastUpdate > OFFLINE_AFTER);
+        }, 250);
+
+        function render(state) {
+            lastUpdate = Date.now();
+            document.body.classList.remove('disconnected');
+
+            $('scene-key').textContent = state.scene.key;
+            $('scene-name').textContent = state.scene.name;
+            $('scene-sub').textContent =
+                `${state.scene.index + 1} / ${state.scene.total}` +
+                (state.fade.transitioning ? '  — 遷移中' : '');
+
+            renderMode(state.mode);
+            renderCamera(state.camera);
+            renderAudio(state.audio);
+            renderEffects(state.effects);
+
+            $('tile').textContent = state.tile ? `${state.tile} キー` : 'なし';
+            $('fade').textContent = state.fade.enabled ? 'ON' : 'OFF';
+            $('fps').textContent = state.fps;
+        }
+
+        function renderMode(mode) {
+            if (!mode) {
+                $('mode-label').textContent = '—';
+                $('mode-sub').textContent = 'このシーンに切替なし';
+                $('mode-chips').innerHTML = '<span style="color:var(--dim)">このシーンには切替がありません</span>';
+                return;
+            }
+
+            $('mode-label').textContent = mode.label || mode.key;
+            // 1キーで循環する場合と、キーごとに直接選ぶ場合で書き方を変える
+            $('mode-sub').textContent = mode.cycle
+                ? `切替  ${mode.key} キーで循環`
+                : `切替  ${mode.key} キー`;
+
+            $('mode-chips').innerHTML = mode.options.map((option, i) => `
+                <span class="chip ${i === mode.index ? 'active' : ''}">
+                    <span class="k">${option.key}</span><span>${option.label}</span>
+                </span>`).join('');
+        }
+
+        function renderCamera(camera) {
+            $('cam-state').innerHTML = camera.ready
+                ? '<span class="status-dot ok"></span>映像あり'
+                : '<span class="status-dot ng"></span><span class="warn">映像なし</span>';
+            $('cam-label').textContent = camera.label;
+            $('cam-count').textContent = camera.total > 0
+                ? `${camera.index + 1} / ${camera.total} 台`
+                : '検出なし';
+        }
+
+        function renderAudio(audio) {
+            $('audio-source').textContent = audio.source === 'mic' ? 'マイク / ライン入力' : '音源ファイル';
+            for (const band of ['level', 'bass', 'mid', 'treble']) {
+                $(`m-${band}`).style.width = `${Math.min(100, audio[band] * 100)}%`;
+                $(`n-${band}`).textContent = audio[band].toFixed(2);
+            }
+        }
+
+        function renderEffects(effects) {
+            $('fx-chips').innerHTML = effects.map((fx) => `
+                <span class="chip ${fx.enabled ? 'on' : ''}">
+                    <span class="k">${fx.key}</span><span>${fx.enabled ? 'ON' : 'off'}</span>
+                </span>`).join('');
+        }
+    </script>
+</body>
+
+</html>
