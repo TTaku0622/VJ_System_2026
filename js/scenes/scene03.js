@@ -37,6 +37,25 @@ class Scene03 extends BaseScene {
 
         this.title = '幾何学';
 
+        // MIDI の学習モードで割り当てを聞くキー。並び順がそのまま聞かれる順番になる
+        this.keyHelp = [
+            { key: 'Q', label: 'base に戻す' },
+            { key: 'W', label: '自動進行 ON/OFF' },
+            { key: 'A', label: '進行を戻す' },
+            { key: 'S', label: '進行を進める' },
+            { key: 'Z', label: '上昇の距離 −' },
+            { key: 'X', label: '上昇の距離 ＋' },
+            { key: 'R', label: '上昇の内側寄り −' },
+            { key: 'T', label: '上昇の内側寄り ＋' },
+            { key: 'C', label: '内寄せの量 −' },
+            { key: 'D', label: '内寄せの量 ＋' },
+            { key: 'U', label: '内寄せの上昇（循環）' },
+            { key: 'O', label: '役割の割り当てを反転' },
+            { key: 'E', label: '頂点の数（循環）' },
+            { key: 'Y', label: '左右対称 ON/OFF' },
+            { key: 'G', label: '現在値をコンソールへ出力' },
+        ];
+
         // ---- base の形（base.jpg の実測値。角度は真下を 0、外向きを正とする） ----
         this.APEX_X = 0.5;              // 頂点列の起点（画面幅比）
         this.APEX_Y = 0.06;             // 頂点列の起点（画面高さ比）

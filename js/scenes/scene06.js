@@ -23,6 +23,14 @@ class Scene06 extends BaseScene {
         // カメラを直接選ぶキー。並び順がデバイス一覧の 0, 1, 2 番目に対応する
         this.CAMERA_KEYS = ['Q', 'W', 'E'];
 
+        // MIDI の学習モードで割り当てを聞くキー。加工（modes）は自動で含まれる
+        this.keyHelp = [
+            { key: 'Q', label: 'カメラ 1台目' },
+            { key: 'W', label: 'カメラ 2台目' },
+            { key: 'E', label: 'カメラ 3台目' },
+            { key: 'R', label: 'カメラを再取得' },
+        ];
+
         // ---- 枠線モードのしきい値。小さいほど細かい線まで出る ----
         this.THRESHOLD_QUIET = 0.50;    // 無音時。強い輪郭だけが残るので絵は消えない
         this.THRESHOLD_LOUD = 0.18;     // 大音量時。細部まで線になる

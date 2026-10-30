@@ -37,19 +37,56 @@
         #help.visible {
             display: block;
         }
+
+        /* MIDI 学習モードの案内。押すパッドを見ながら読むので中央・大きめに出す */
+        #midi-learn {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 28px 36px;
+            font: 18px/1.9 monospace;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.88);
+            border: 1px solid #888;
+            white-space: pre;
+            pointer-events: none;
+            display: none;
+            z-index: 20;
+        }
+
+        #midi-learn.visible {
+            display: block;
+        }
     </style>
 </head>
 
 <body>
     <main></main>
 
-    <div id="help">[SCENE]  1..9,0 : シーン切替
-[FADE]   P     : クロスフェード ON/OFF（既定 OFF = 即時切替）
+    <!-- MIDI 学習モードの案内。midiManager が中身を書き換える -->
+    <div id="midi-learn"></div>
+
+    <div id="help">[SCENE]  1..9,0 : 選択中のレイヤーにシーンを載せる
+[LAYER]  ← →   : 操作するレイヤーを選ぶ（1〜3）
+[LAYER]  ↑ ↓   : 選択中のレイヤーの不透明度 ＋/−
+[LAYER]  [     : 合成モードを循環（通常 / 加算 / スクリーン / 乗算）
+[LAYER]  ]     : レイヤーを空にする
+[FADE]   P     : 切替フェード ON/OFF（レイヤー内の載せ替えを1小節かけて混ぜる。既定 OFF）
+[TEMPO]  TAB   : タップテンポ（叩いた瞬間が拍の頭になる）
+[TEMPO]  -     : いまを小節の1拍目にする（頭をそろえる）
+[TEMPO]  SHIFT+↑ ↓ : BPM ±1    SHIFT+← → : 拍を遅らせる / 早める
 [TILE]   L K , : 2分割 / 4分割 / 16分割（同キーで解除）
 [FX]     B V   : ミラー（上下左右 / 左右）※排他
 [FX]     N M   : モザイク（粗 / 細）※排他
 [AUDIO]  SPACE : 再生 / 一時停止（マイク時は音声の開始）
 [AUDIO]  I     : 音声入力を ファイル ↔ マイク で切替（既定はマイク）
+[MIDI]   グリッド列1〜3 : レイヤー1〜3 にシーンを出す / SCENE LAUNCH : 横一列をまとめて
+[MIDI]   フェーダー1〜3 : レイヤーの不透明度 / MASTER : 出力全体の明るさ
+[MIDI]   TAP TEMPO / NUDGE − ＋ / TEMPO つまみ : タップ / 拍をずらす / BPM ±1
+[MIDI]   METRONOME : いまを小節の1拍目にする（頭をそろえる）
+[MIDI]   ;     : MIDI 学習モード（パッドに操作を割り当てる）
+[MIDI]   .     : MIDI 監視 ON/OFF（番号をコンソールに出す）
 [VIEW]   /     : このヘルプ表示
 [VIEW]   ENTER : フルスクリーン
 
@@ -78,11 +115,24 @@
 [CAM]    F     : ゆがみ
 [CAM]    G     : 2値化（シルエット）
 [CAM]    H     : 残像
-[CAM]    J     : ストロボ（バスドラで発光）</div>
+[CAM]    J     : ストロボ（バスドラで発光）
+
+--- Scene08 流体 ---
+[FLUID]  A S D F : 配色（雨花石 / 墨 / 溶岩 / 虹）
+[FLUID]  Z       : 渦 ↔ 横縞
+[FLUID]  X       : 鏡（上下左右）ON/OFF
+
+--- Scene09 白線 ---
+[LINES]  A S D   : 拍に合わせて引き直す間隔 1/4 / 1/8 / 1/16
+[LINES]  Q       : その場で線の位置をランダムに置き直す
+[LINES]  つまみ  : 線の太さ（絞りきりが既定の見た目）</div>
 
     <script src="js/audioManager.js"></script>
+    <script src="js/tempoManager.js"></script>
     <script src="js/cameraManager.js"></script>
     <script src="js/statusBus.js"></script>
+    <script src="js/midiMap.js"></script>
+    <script src="js/midiManager.js"></script>
     <script src="js/baseScene.js"></script>
     <script src="js/sceneManager.js"></script>
     <script src="js/scenes/scene01.js"></script>
@@ -91,6 +141,9 @@
     <script src="js/scenes/scene04.js"></script>
     <script src="js/scenes/scene05.js"></script>
     <script src="js/scenes/scene06.js"></script>
+    <script src="js/scenes/scene07.js"></script>
+    <script src="js/scenes/scene08.js"></script>
+    <script src="js/scenes/scene09.js"></script>
     <script src="js/sketch.js"></script>
 </body>
 

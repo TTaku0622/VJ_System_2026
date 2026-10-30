@@ -13,6 +13,11 @@ p5.js ベースの VJ システム。構成とキー割り当ては [README.md](
   `effects` がキー名で対応している。片方だけ変更しない。
 - `setup()` より前に `createGraphics` は呼べない。シーンの `new` は
   `sketch.js` の `setup()` 内でのみ行う。
+- レイヤーの枚数は `sceneManager.js` の `LAYER_COUNT` と `shader/main.frag` の
+  `u_layerN` の組が対応している（GLSL ES 1.0 はテクスチャを配列で回せないので書き下し）。
+  片方だけ変えない。`midiMap.js` の `layers` と `knobs.global` も枚数ぶん要る。
+- MIDI でシーンを出すパッドは `midiMap.js` の `layers`（`slot:<レイヤー>:<段>`）で、
+  どのシーンが入るかは `sceneManager.js` の `deck`。シーンの割り当てはパッドではなく `deck` を直す。
 
 ## 実行・確認
 

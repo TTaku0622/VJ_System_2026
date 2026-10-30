@@ -209,6 +209,187 @@
             color: var(--warn);
         }
 
+        /* レイヤー。左から 1・2・3（APC40 の列と同じ並び）。選択中は枠を明るく */
+        .layers-card {
+            grid-column: 1 / -1;
+        }
+
+        .layers {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .layer {
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .layer.selected {
+            border-color: var(--text);
+            box-shadow: 0 0 0 1px var(--text) inset;
+        }
+
+        .layer.hidden-output {
+            opacity: .5;
+        }
+
+        .layer-head {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .layer-no {
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .layer-scene {
+            font-size: 17px;
+            font-weight: 600;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .layer-meta {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            color: var(--dim);
+        }
+
+        .tag {
+            padding: 1px 7px;
+            border: 1px solid var(--line);
+            border-radius: 5px;
+        }
+
+        .tag.on {
+            border-color: var(--on);
+            color: var(--on);
+        }
+
+        .tag.warn {
+            border-color: var(--warn);
+            color: var(--warn);
+        }
+
+        /* デッキ。このレイヤーで出せるシーンを上の段から並べる（グリッドの列と同じ） */
+        .slots {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .slot {
+            padding: 4px 9px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            color: var(--dim);
+            min-height: 30px;
+        }
+
+        .slot.empty {
+            border-style: dashed;
+            opacity: .45;
+        }
+
+        .slot.playing {
+            background: var(--text);
+            border-color: var(--text);
+            color: var(--bg);
+            font-weight: 600;
+        }
+
+        /* テンポ。BPM は大きく、拍は4つのランプで（1拍目だけ色を変える） */
+        .tempo-top {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .bpm {
+            font-size: 44px;
+            font-weight: 700;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .bpm-unit {
+            color: var(--dim);
+        }
+
+        .beats {
+            display: flex;
+            gap: 7px;
+            margin-left: auto;
+            align-self: center;
+        }
+
+        .beat {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--off);
+        }
+
+        .beat.on {
+            background: var(--text);
+        }
+
+        .beat.on.downbeat {
+            background: var(--on);
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        button,
+        input {
+            font: inherit;
+            color: var(--text);
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            padding: 7px 12px;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        button:hover {
+            border-color: var(--dim);
+        }
+
+        button:active {
+            background: var(--text);
+            color: var(--bg);
+        }
+
+        input {
+            width: 7em;
+        }
+
+        .tap {
+            flex: 1;
+            font-size: 18px;
+            font-weight: 700;
+            padding: 12px;
+        }
+
         /* 出力ウィンドウからの更新が途切れたら全面で知らせる */
         #offline {
             grid-column: 1 / -1;
@@ -256,6 +437,34 @@
         </div>
     </div>
 
+    <div class="card layers-card">
+        <h2>レイヤー（左から 1・2・3。数字が大きいほど上に重なる）</h2>
+        <div class="layers" id="layer-list"></div>
+    </div>
+
+    <!-- ここだけは操作できる。ボタンは出力側の handleKey() に命令（'tempo:tap' など）を送る -->
+    <div class="card">
+        <h2>テンポ</h2>
+        <div class="tempo-top">
+            <span class="bpm" id="bpm">—</span><span class="bpm-unit">BPM</span>
+            <div class="beats" id="beats"></div>
+        </div>
+        <form class="controls" id="bpm-form">
+            <input id="bpm-input" type="number" step="0.1" placeholder="BPM" />
+            <button type="submit">指定</button>
+            <button type="button" data-command="tempo:adjust:-1">−1</button>
+            <button type="button" data-command="tempo:adjust:1">＋1</button>
+        </form>
+        <div class="controls">
+            <button type="button" class="tap" id="tap">TAP</button>
+        </div>
+        <div class="controls">
+            <button type="button" data-command="tempo:nudge:-1">◀ 遅らせる</button>
+            <button type="button" data-command="tempo:nudge:1">早める ▶</button>
+            <button type="button" data-command="tempo:resync">頭をそろえる</button>
+        </div>
+    </div>
+
     <div class="card">
         <h2>カメラ</h2>
         <div class="row">
@@ -275,6 +484,35 @@
     <div class="card">
         <h2>加工モード</h2>
         <div class="chips" id="mode-chips"></div>
+    </div>
+
+    <div class="card" id="knob-card">
+        <h2>つまみ</h2>
+        <div id="knob-list"></div>
+    </div>
+
+    <div class="card">
+        <h2>MIDI</h2>
+        <div class="row">
+            <span class="label">状態</span>
+            <span class="value" id="midi-state"><span class="status-dot"></span>—</span>
+        </div>
+        <div class="row">
+            <span class="label">機器</span>
+            <span class="value" id="midi-device">—</span>
+        </div>
+        <div class="row">
+            <span class="label">割り当て</span>
+            <span class="value" id="midi-assign">—</span>
+        </div>
+        <div class="row">
+            <span class="label">パッドの LED</span>
+            <span class="value" id="midi-led">—</span>
+        </div>
+        <div class="row">
+            <span class="label">最後の入力</span>
+            <span class="value" id="midi-last">—</span>
+        </div>
     </div>
 
     <div class="card">
@@ -313,7 +551,7 @@
             <span class="value" id="tile">なし</span>
         </div>
         <div class="row">
-            <span class="label">クロスフェード</span>
+            <span class="label">切替フェード</span>
             <span class="value" id="fade">OFF</span>
         </div>
         <div class="row">
@@ -335,24 +573,139 @@
             document.body.classList.toggle('disconnected', Date.now() - lastUpdate > OFFLINE_AFTER);
         }, 250);
 
+        // ---- テンポの操作。命令を出力側へ送るだけで、表示は次に届く状態で更新される ----
+        let tempo = null;       // 最後に届いたテンポの状態
+
+        for (const button of document.querySelectorAll('[data-command]')) {
+            button.addEventListener('click', () => bus.sendCommand(button.dataset.command));
+        }
+
+        // TAP はクリックより早い pointerdown で送る（押した瞬間が拍の頭になるので、遅れると拍がずれる）
+        $('tap').addEventListener('pointerdown', (event) => {
+            event.preventDefault();
+            bus.sendCommand('tempo:tap');
+        });
+
+        $('bpm-form').addEventListener('submit', (event) => {
+            event.preventDefault();
+            const value = Number($('bpm-input').value);
+            if (!Number.isFinite(value) || value <= 0) return;
+            bus.sendCommand(`tempo:set:${value}`);
+            $('bpm-input').value = '';
+        });
+
+        // 拍のランプは毎フレーム自分で進める。状態は毎秒15回しか届かないので、
+        // 届いた拍数と時刻から今の拍を計算する（ウィンドウごとの時計の差は Date.now() で吸収）
+        function animateBeats() {
+            if (tempo) {
+                const beats = tempo.beats + (Date.now() - tempo.sentAt) * tempo.bpm / 60000;
+                const index = Math.floor(((beats % tempo.beatsPerBar) + tempo.beatsPerBar) % tempo.beatsPerBar);
+                const flash = ((beats % 1) + 1) % 1 < 0.25;     // 拍の頭から 1/4 拍だけ点ける
+
+                const lamps = $('beats').children;
+                for (let i = 0; i < lamps.length; i++) {
+                    lamps[i].classList.toggle('on', i === index && flash);
+                }
+            }
+            requestAnimationFrame(animateBeats);
+        }
+        requestAnimationFrame(animateBeats);
+
+        function renderTempo(state) {
+            // 出力側が古いままでも操作画面が壊れないようにしておく
+            if (!state) return;
+
+            tempo = state;
+            $('bpm').textContent = state.bpm.toFixed(1);
+            $('bpm-input').min = state.min;
+            $('bpm-input').max = state.max;
+
+            if ($('beats').children.length !== state.beatsPerBar) {
+                $('beats').innerHTML = Array.from({ length: state.beatsPerBar },
+                    (_, i) => `<span class="beat ${i === 0 ? 'downbeat' : ''}"></span>`).join('');
+            }
+        }
+
         function render(state) {
             lastUpdate = Date.now();
             document.body.classList.remove('disconnected');
 
-            $('scene-key').textContent = state.scene.key;
-            $('scene-name').textContent = state.scene.name;
+            // 大きく出すのは「選択中のレイヤーのシーン」。キーと MIDI のシーン操作が届く先
+            $('scene-key').textContent = state.scene.key || '-';
+            $('scene-name').textContent = state.scene.name || '（空のレイヤー）';
             $('scene-sub').textContent =
-                `${state.scene.index + 1} / ${state.scene.total}` +
+                `レイヤー${state.scene.layer} を操作中` +
                 (state.fade.transitioning ? '  — 遷移中' : '');
 
+            renderLayers(state.layers);
+            renderTempo(state.tempo);
             renderMode(state.mode);
+            renderKnobs(state.knobs);
             renderCamera(state.camera);
+            renderMidi(state.midi);
             renderAudio(state.audio);
             renderEffects(state.effects);
 
             $('tile').textContent = state.tile ? `${state.tile} キー` : 'なし';
             $('fade').textContent = state.fade.enabled ? 'ON' : 'OFF';
             $('fps').textContent = state.fps;
+        }
+
+        function renderLayers(layers) {
+            // 出力側が古いままでも操作画面が壊れないようにしておく
+            if (!layers) {
+                $('layer-list').innerHTML = '';
+                return;
+            }
+
+            $('layer-list').innerHTML = layers.map((layer) => {
+                const tags = [`<span class="tag">${layer.blend}</span>`];
+                if (layer.solo) tags.push('<span class="tag on">ソロ</span>');
+                if (layer.bypass) tags.push('<span class="tag warn">バイパス</span>');
+                if (layer.fading) tags.push('<span class="tag on">遷移中</span>');
+
+                const slots = layer.deck.map((slot) => {
+                    if (!slot) return '<div class="slot empty"></div>';
+                    const playing = slot.key === layer.key;
+                    return `<div class="slot ${playing ? 'playing' : ''}">${slot.key}  ${slot.name}</div>`;
+                }).join('');
+
+                // 実際の出力が 0（空・バイパス・ソロの外・不透明度0）なら薄く出す
+                const classes = ['layer'];
+                if (layer.selected) classes.push('selected');
+                if (layer.output <= 0) classes.push('hidden-output');
+
+                return `
+                    <div class="${classes.join(' ')}">
+                        <div class="layer-head">
+                            <span class="layer-no">L${layer.number}</span>
+                            <span class="layer-scene">${layer.key ? `${layer.key}  ${layer.name}` : '（空）'}</span>
+                        </div>
+                        <div class="meter">
+                            <span class="name">不透明</span>
+                            <div class="track"><div class="fill" style="width:${Math.round(layer.opacity * 100)}%"></div></div>
+                            <span class="num">${Math.round(layer.opacity * 100)}</span>
+                        </div>
+                        <div class="layer-meta">${tags.join('')}</div>
+                        <div class="slots">${slots}</div>
+                    </div>`;
+            }).join('');
+        }
+
+        // つまみを宣言していないシーンではカードごと消す（並びが詰まって見やすい）
+        function renderKnobs(knobs) {
+            if (!knobs || knobs.length === 0) {
+                $('knob-card').style.display = 'none';
+                return;
+            }
+
+            $('knob-card').style.display = '';
+            $('knob-list').innerHTML = knobs.map((knob) => `
+                <div class="meter">
+                    <span class="name">${knob.label}</span>
+                    <div class="track"><div class="fill" style="width:${Math.min(100, Math.max(0, knob.ratio * 100))}%"></div></div>
+                    <span class="num">${knob.value.toFixed(1)}</span>
+                </div>`).join('');
         }
 
         function renderMode(mode) {
@@ -383,6 +736,40 @@
             $('cam-count').textContent = camera.total > 0
                 ? `${camera.index + 1} / ${camera.total} 台`
                 : '検出なし';
+        }
+
+        function renderMidi(midi) {
+            // 出力側が古いままでも操作画面が壊れないようにしておく
+            if (!midi) {
+                $('midi-state').innerHTML = '<span class="status-dot"></span>—';
+                return;
+            }
+
+            if (midi.learning) {
+                // 学習中は進み具合を出す。出力ウィンドウを見なくても残りが分かる
+                $('midi-state').innerHTML =
+                    `<span class="status-dot ok"></span>学習中 ${midi.learnDone + 1} / ${midi.learnTotal}`;
+            } else if (midi.ready) {
+                $('midi-state').innerHTML = midi.monitor
+                    ? '<span class="status-dot ok"></span>接続あり（監視 ON）'
+                    : '<span class="status-dot ok"></span>接続あり';
+            } else {
+                $('midi-state').innerHTML =
+                    '<span class="status-dot ng"></span><span class="warn">未接続</span>';
+            }
+
+            // 保存された学習結果は midiMap.js より優先される。**どちらが効いているか**を出す
+            $('midi-assign').textContent = midi.stored
+                ? '学習結果（ブラウザに保存）'
+                : 'midiMap.js';
+
+            // LED はモード切替（sysex）が通らないと光らない。**気づけないと悩むので出す**
+            $('midi-led').innerHTML = midi.led
+                ? '点灯中'
+                : '<span class="warn">光らない（MIDI の sysex 未許可）</span>';
+
+            $('midi-device').textContent = midi.device || midi.error || '—';
+            $('midi-last').textContent = midi.last || '—';
         }
 
         function renderAudio(audio) {

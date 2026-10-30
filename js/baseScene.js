@@ -25,6 +25,18 @@ class BaseScene {
         // 例: this.modes = { keys: ['T'], labels: ['円', '三角'] };
         this.modes = null;
         this.modeIndex = 0;
+
+        // MIDI の学習モードで割り当てを聞く、このシーン固有のキー。
+        // **modes で宣言したキーは自動で含まれる**ので、ここに書くのはそれ以外だけ。
+        // 例: this.keyHelp = [{ key: 'Q', label: '位置を引き直す' }];
+        this.keyHelp = [];
+
+        // つまみ（MIDI の CC）で連続して動かすパラメータの宣言。
+        // **min が「絞りきった状態」**なので、いまの見た目を min に置けば
+        // つまみを下げても元の絵に戻るだけで、崩れることがない。
+        // 例: this.knobs = [{ name: 'weight', label: '線の太さ',
+        //                     property: 'weightScale', min: 1, max: 6 }];
+        this.knobs = [];
     }
 
     setup() { }
@@ -63,6 +75,19 @@ class BaseScene {
         return this.setMode(index);
     }
 
+    // ---- つまみ（knobs を宣言したシーンだけ使う） ----
+
+    // t は 0.0〜1.0。宣言した範囲へ写して代入する。
+    // **表示していないシーンに対しても呼べる**ので、操作画面からの遠隔操作もここを通す想定
+    setKnob(name, t) {
+        const knob = this.knobs.find((entry) => entry.name === name);
+        if (!knob) return false;
+
+        this[knob.property] = knob.min + (knob.max - knob.min) * constrain(t, 0, 1);
+        if (typeof this.onKnobChanged === 'function') this.onKnobChanged(name);
+        return true;
+    }
+
     // SceneManager がテクスチャとして受け取る描画バッファ
     getScene() {
         return this.pg;
@@ -86,4 +111,13 @@ class BaseScene {
     mid(spectrum) { return this.avg(spectrum, 3, 10); }
     treble(spectrum) { return this.avg(spectrum, 11, 31); }
     level(spectrum) { return this.avg(spectrum, 0, spectrum.length - 1); }
+
+    // ---- テンポ用ヘルパー（拍に合わせたいシーンだけ使う） ----
+    // **フレーム数ではなく実時間から出している**ので、fps が落ちても拍とずれない
+
+    bpm() { return tempoManager.bpm; }
+    beats() { return tempoManager.beats(); }            // 通算の拍数（小数）。刻みを数えるのに使う
+    beatPhase() { return tempoManager.phase(); }        // 拍の中の位置 0.0〜1.0（0 が拍の頭）
+    beatInBar() { return tempoManager.beatInBar(); }    // 小節の中の何拍目か 0〜3
+    barPhase() { return tempoManager.barPhase(); }      // 小節の中の位置 0.0〜1.0
 }
