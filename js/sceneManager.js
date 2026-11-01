@@ -50,10 +50,12 @@ class SceneManager {
         // 各レイヤーで出せるシーン（Resolume のクリップの並び）。値はシーン切替キー、null は空き。
         // **MIDI グリッドの列1〜3 がそのままこの表になる**（上の段から順）。
         // SCENE LAUNCH ボタンは横一列（同じ段）をまとめて出す
+        // レイヤー1 の2段目の空きは Scene05（トンネル）を消した跡（2026-11-01）。
+        // ほかのシーンのパッドの位置を変えないよう、詰めずに空けてある
         this.deck = [
-            ['8', '5', '7', '2', '1'],          // レイヤー1  背景（流体 / トンネル / 格子 / 黒 / 白）
+            ['8', null, '7', '2', '1'],         // レイヤー1  背景（流体 / 空き / 格子 / 黒 / 白）
             ['6', null, null, null, null],      // レイヤー2  カメラ
-            ['9', '3', '4', null, null],        // レイヤー3  上に乗せる線画（白線 / 幾何学 / 同心）
+            ['9', '3', '4', null, null],        // レイヤー3  上に乗せる線画（白線 / 地球儀 / 同心）
         ];
 
         this.layers = [];
@@ -124,11 +126,11 @@ class SceneManager {
             });
         });
 
-        // シーン切替キー: 1..9,0 を登録順の 0..9 番に割り当てる
-        this.sceneKeyMap = {
-            '1': 0, '2': 1, '3': 2, '4': 3, '5': 4,
-            '6': 5, '7': 6, '8': 7, '9': 8, '0': 9,
-        };
+        // シーン切替キー → 登録順。addScene() で埋まる（例 { '1': 0, '2': 1, '4': 2, ... }）。
+        // **キーは登録順ではなく、登録時に渡したキー**。シーンを消しても残りのキーがずれない
+        this.SCENE_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
+        this.sceneKeyMap = {};
+        this.sceneKeys = [];        // 登録順 → キー
     }
 
     // preload() から呼ぶ
@@ -136,8 +138,18 @@ class SceneManager {
         this.postShader = loadShader(vertFilePath, fragFilePath);
     }
 
-    addScene(scene) {
+    // key はそのシーンを出すキー（'1'〜'9' '0'）。使えないキー・使用済みのキーなら
+    // キー無しで登録する（デッキや数字キーからは出せないが、動作は止めない）
+    addScene(scene, key) {
+        const index = this.scenes.length;
         this.scenes.push(scene);
+
+        const usable = this.SCENE_KEYS.includes(key) && !(key in this.sceneKeyMap);
+        if (!usable) {
+            console.warn(`[scene] ${scene.constructor.name} のキー '${key}' は使えない（'1'〜'9' '0' で、ほかと重ならないもの）`);
+        }
+        this.sceneKeys[index] = usable ? key : null;
+        if (usable) this.sceneKeyMap[key] = index;
     }
 
     // tempo は tempoManager。切替フェードの長さを拍で数えるのに使う
@@ -342,9 +354,7 @@ class SceneManager {
     }
 
     sceneIndexForKey(key) {
-        if (!(key in this.sceneKeyMap)) return null;
-        const index = this.sceneKeyMap[key];
-        return index < this.scenes.length ? index : null;
+        return key in this.sceneKeyMap ? this.sceneKeyMap[key] : null;
     }
 
     sceneName(index) {
@@ -421,10 +431,9 @@ class SceneManager {
         return index === null ? null : this.sceneKeyForIndex(index);
     }
 
-    // 登録順 → 切替キー。10 個を超えたぶんには切替キーが無いので null
+    // 登録順 → 切替キー。キー無しで登録したシーンは null
     sceneKeyForIndex(index) {
-        if (index < 0 || index >= 10) return null;
-        return index < 9 ? String(index + 1) : '0';
+        return this.sceneKeys[index] ?? null;
     }
 
     // ================= 内部 =================

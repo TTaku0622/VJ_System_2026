@@ -67,7 +67,7 @@
     <!-- MIDI 学習モードの案内。midiManager が中身を書き換える -->
     <div id="midi-learn"></div>
 
-    <div id="help">[SCENE]  1..9,0 : 選択中のレイヤーにシーンを載せる
+    <div id="help">[SCENE]  1 2 3 4 6 7 8 9 : 選択中のレイヤーにシーンを載せる（5 は空き）
 [LAYER]  ← →   : 操作するレイヤーを選ぶ（1〜3）
 [LAYER]  ↑ ↓   : 選択中のレイヤーの不透明度 ＋/−
 [LAYER]  [     : 合成モードを循環（通常 / 加算 / スクリーン / 乗算）
@@ -90,18 +90,8 @@
 [VIEW]   /     : このヘルプ表示
 [VIEW]   ENTER : フルスクリーン
 
---- Scene03 幾何学（線） ---
-[LINE]   Q     : base に戻す
-[LINE]   W     : 自動進行 ON/OFF
-[LINE]   A S   : 進行を手動で 戻す / 進める
-[LINE]   Z X   : 上昇の距離 −/＋
-[LINE]   R T   : 上昇の内側寄り −/＋
-[LINE]   C D   : 内寄せの量 −/＋
-[LINE]   U     : 内寄せの上昇（4段階で循環）
-[LINE]   O     : 役割の割り当てを反転
-[LINE]   E     : 頂点の数（片側4〜24で循環）
-[LINE]   Y     : 左右対称 ON/OFF
-[LINE]   G     : 現在値をコンソールに出力
+--- Scene03 鼓動する地球儀 ---
+[GLOBE]  キー無し : 三角形の網目の球 20 個が毎拍ふくらむ・ふわふわ漂う・真ん中に集まる・小節の頭で最大10個を跳ね上げる
 
 --- Scene04 スペクトル同心シェイプ ---
 [SPEC]   T     : 円 ↔ 三角
@@ -139,7 +129,6 @@
     <script src="js/scenes/scene02.js"></script>
     <script src="js/scenes/scene03.js"></script>
     <script src="js/scenes/scene04.js"></script>
-    <script src="js/scenes/scene05.js"></script>
     <script src="js/scenes/scene06.js"></script>
     <script src="js/scenes/scene07.js"></script>
     <script src="js/scenes/scene08.js"></script>

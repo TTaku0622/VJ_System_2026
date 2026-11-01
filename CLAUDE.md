@@ -9,6 +9,8 @@ p5.js ベースの VJ システム。構成とキー割り当ては [README.md](
   ポストシェーダーがこのバッファをテクスチャとして受け取るため。
 - シーンを追加したら `index.html` の script タグと `sketch.js` の `addScene()` の
   両方に登録する（どちらか片方だと動かない）。
+- シーンのキーは `addScene(scene, '4')` の第2引数で固定（登録順ではない）。
+  消したシーンの番号は空きのまま残し、残りのキーをずらさない（デッキと MIDI の表がキーで引いているため）。
 - ポストシェーダーのエフェクトは `shader/main.frag` と `sceneManager.js` の
   `effects` がキー名で対応している。片方だけ変更しない。
 - `setup()` より前に `createGraphics` は呼べない。シーンの `new` は

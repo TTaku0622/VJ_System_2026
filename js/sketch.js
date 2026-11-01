@@ -29,16 +29,17 @@ function setup() {
     createCanvas(windowWidth, windowHeight, WEBGL);
     noCursor();
 
-    // ここにシーンを登録する。登録順に 1, 2, 3, ... キーへ割り当てられる
-    sceneManager.addScene(new Scene01());
-    sceneManager.addScene(new Scene02());
-    sceneManager.addScene(new Scene03());
-    sceneManager.addScene(new Scene04());
-    sceneManager.addScene(new Scene05());
-    sceneManager.addScene(new Scene06(cameraShader));
-    sceneManager.addScene(new Scene07());
-    sceneManager.addScene(new Scene08(fluidShader));
-    sceneManager.addScene(new Scene09());
+    // ここにシーンを登録する。2つ目の引数がそのシーンを出すキー（'1'〜'9' '0'）。
+    // **キーは登録順ではなく各シーンの番号に固定している。**シーンを消しても残りのキー・
+    // デッキ・MIDI の表がずれないように（5 は 2026-11-01 にシーンを消して空き）
+    sceneManager.addScene(new Scene01(), '1');
+    sceneManager.addScene(new Scene02(), '2');
+    sceneManager.addScene(new Scene03(), '3');
+    sceneManager.addScene(new Scene04(), '4');
+    sceneManager.addScene(new Scene06(cameraShader), '6');
+    sceneManager.addScene(new Scene07(), '7');
+    sceneManager.addScene(new Scene08(fluidShader), '8');
+    sceneManager.addScene(new Scene09(), '9');
 
     sceneManager.setup(tempoManager);   // 切替フェードの長さを拍で数えるのに使う
     audioManager.setup();
