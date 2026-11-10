@@ -296,6 +296,22 @@
             min-height: 30px;
         }
 
+        .slot[data-command] {
+            cursor: pointer;
+        }
+
+        .slot[data-command]:hover {
+            border-color: var(--dim);
+        }
+
+        .slots-note {
+            margin-top: 6px;
+            font-size: 11px;
+            color: var(--dim);
+            border-top: 1px dashed var(--line);
+            padding-top: 4px;
+        }
+
         .slot.empty {
             border-style: dashed;
             opacity: .45;
@@ -631,7 +647,10 @@
             document.body.classList.remove('disconnected');
 
             // 大きく出すのは「選択中のレイヤーのシーン」。キーと MIDI のシーン操作が届く先
-            $('scene-key').textContent = state.scene.key || '-';
+            // 名前だけのシーン（'chevron' など）は数字の枠に入りきらないので小さく出す
+            const sceneKey = state.scene.key || '-';
+            $('scene-key').textContent = sceneKey;
+            $('scene-key').style.fontSize = sceneKey.length > 2 ? '20px' : '';
             $('scene-name').textContent = state.scene.name || '（空のレイヤー）';
             $('scene-sub').textContent =
                 `レイヤー${state.scene.layer} を操作中` +
@@ -651,6 +670,19 @@
             $('fps').textContent = state.fps;
         }
 
+        // 数字キーのシーンは「4  スペクトル」、名前だけのシーン（'chevron' など）は表示名だけ出す
+        function sceneLabel(scene) {
+            return /^\d$/.test(scene.key) ? `${scene.key}  ${scene.name}` : scene.name;
+        }
+
+        // デッキの欄のクリック。中身は毎回描き直すので、外側で1回だけ受ける
+        $('layer-list').addEventListener('click', (event) => {
+            const slot = event.target.closest('[data-command]');
+            if (slot) bus.sendCommand(slot.dataset.command);
+        });
+
+        const APC_ROWS = 5;     // APC40 のグリッドの段数
+
         function renderLayers(layers) {
             // 出力側が古いままでも操作画面が壊れないようにしておく
             if (!layers) {
@@ -664,10 +696,14 @@
                 if (layer.bypass) tags.push('<span class="tag warn">バイパス</span>');
                 if (layer.fading) tags.push('<span class="tag on">遷移中</span>');
 
-                const slots = layer.deck.map((slot) => {
-                    if (!slot) return '<div class="slot empty"></div>';
+                // クリックでそのシーンを出す（数字キーの無いシーンはここか APC40 から出す）
+                const slots = layer.deck.map((slot, row) => {
+                    // 6段目から下は APC40 のグリッドに無い（5段）。ここからしか出せないので区切って示す
+                    const divider = row === APC_ROWS ? '<div class="slots-note">6段目〜 操作画面のみ</div>' : '';
+                    if (!slot) return divider + '<div class="slot empty"></div>';
                     const playing = slot.key === layer.key;
-                    return `<div class="slot ${playing ? 'playing' : ''}">${slot.key}  ${slot.name}</div>`;
+                    const command = `slot:${layer.number}:${row + 1}`;
+                    return divider + `<div class="slot ${playing ? 'playing' : ''}" data-command="${command}">${sceneLabel(slot)}</div>`;
                 }).join('');
 
                 // 実際の出力が 0（空・バイパス・ソロの外・不透明度0）なら薄く出す
@@ -679,7 +715,7 @@
                     <div class="${classes.join(' ')}">
                         <div class="layer-head">
                             <span class="layer-no">L${layer.number}</span>
-                            <span class="layer-scene">${layer.key ? `${layer.key}  ${layer.name}` : '（空）'}</span>
+                            <span class="layer-scene">${layer.key ? sceneLabel(layer) : '（空）'}</span>
                         </div>
                         <div class="meter">
                             <span class="name">不透明</span>

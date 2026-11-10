@@ -176,7 +176,17 @@ class MidiManager {
 
         for (const [id, key] of Object.entries(MIDI_MAP.global)) {
             const note = this._gridNote(id);
-            if (note !== null) targets[`1:${note}`] = this._globalColor(key, sceneManager, audioManager);
+            if (note !== null) {
+                targets[`1:${note}`] = this._globalColor(key, sceneManager, audioManager);
+                continue;
+            }
+
+            // グリッドの下のボタン列に置いた全体操作（三角形の切り抜きなど）は、ON の間だけ点灯
+            const button = this._trackButton(id);
+            if (button) {
+                const effect = sceneManager.effects[String(key).toUpperCase()];
+                targets[`${button.channel}:${button.note}`] = effect && effect.enabled ? this.TRACK_LED_ON : this.LED.OFF;
+            }
         }
 
         // レイヤーのぶん。グリッドの列1〜3 は「出ている / 出せる / 空き」、ボタン列は ON / OFF

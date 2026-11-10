@@ -4,7 +4,14 @@
 // 元ネタはサカナクション「ミュージック」のライブ（SAKANAQUARIUM 2024 "turn"）の 2:15〜2:55 ごろに
 // 後ろに流れていた映像。線はくっきりした白で、小さい球ほど少し暗くして奥行きを出している。
 //
-// 動きは4つが重なっている:
+// 動きは D で2通りを切り替える（起動時は「カメラが寄る」）:
+//   カメラが寄る  **元映像の動き**（2026-11-02、元映像を 1/30 秒ずつ見て分かった。2:22〜2:23 の引きの画）。
+//                 拍の頭ごとに、カメラが1つの球の目の前まで一瞬で寄り（球が画面いっぱいになる）、
+//                 約 0.15 秒で引いて房全体が見え、そのまま次の拍までゆっくり遠ざかる。
+//                 球は房の中でふわふわ漂いながら自分で回る。床で跳ねる動きは元映像には無かった
+//   床で跳ねる    前の動き。以下の「バウンド」「回転」の説明はこちらのもの
+//
+// 床で跳ねるときの動きは4つが重なっている（鼓動はカメラが寄るときも同じ）:
 //   鼓動     BPM どおり、メトロノームと同じタイミング（毎拍）で全部の球が一斉にふくらんで戻る。
 //            1拍目だけ少し強い
 //   バウンド 画面を箱として、月より弱い重力と空気の抵抗で、風船のようにふわっと跳ねる。床の反発は低め。
@@ -17,8 +24,8 @@
 // **どれも時間で動かしている（フレーム数で積まない）。**鼓動は tempoManager の拍、
 // 動きは前のフレームからの経過時間。fps が落ちても拍とずれず、落ちる速さも変わらない。
 //
-// **裏側の線は隠す**（2026-11-01 本人の指定。最初は透ける案だった）。線の少し内側に黒い球を描き、
-// 奥の線を深度で隠している。
+// **裏側の線も透けて見える**（元映像に合わせて 2026-11-01 に戻した。HIDE_BACK_LINES で隠せる）。
+// 色は A 黒地に白線 / S 白地に黒線（元映像 2:55 の反転した画）。
 //
 // 回転は3次元で持つ（角速度ベクトル ω と、向きを表す四元数 q）。画面の中の動きは2次元でも、
 // 当たり方しだいで横向きの回転も生まれる。座標は p5 の WEBGL と同じ（x 右・y 下・z 手前）。
@@ -27,6 +34,43 @@ class Scene03 extends BaseScene {
         super(WEBGL);
 
         this.title = '鼓動する地球儀';
+
+        // 色の切替。元映像 2:55 の引きの画は、白い画面に暗い線の球（白黒が反転していた）。
+        // 並び順が COLOR_SCHEMES の並び
+        this.modes = { keys: ['A', 'S'], labels: ['黒地に白線', '白地に黒線'] };
+        this.COLOR_SCHEMES = [
+            { bg: 0, line: 255 },
+            { bg: 255, line: 25 },
+        ];
+
+        // 動きの切替（D で循環）。0 = カメラが寄る（元映像）、1 = 床で跳ねる（前の動き）
+        this.MOTION_LABELS = ['カメラが寄る', '床で跳ねる'];
+        this.motionIndex = 0;
+        this.keyHelp = [{ key: 'D', label: '動き（カメラが寄る／床で跳ねる）' }];
+
+        // ---- カメラが寄る（元映像の動き）----
+        // 元映像（2:22〜2:23）を 1/30 秒ずつ見て合わせた。拍の頭で球が画面の高さの 7〜9 割まで
+        // 大きくなり、0.13 秒ほどで房全体が見える大きさまで引いている
+        this.PUNCH_DISTANCE = 2.2;          // 拍の頭のカメラと球の距離（球の半径の何倍か）。小さいほど大きく写る
+        // 拍の何割で引ききるか。元映像は寄った画が3コマ（0.07 秒）ほど続いてから 0.13 秒で引いていた。
+        // (1 − 位置)^6 で引くと寄った画が一瞬で消えたので、なめらかな S 字（smoothstep）にした
+        this.PUNCH_RELEASE = 0.36;
+        this.FOCUS_CANDIDATES = 6;          // 寄る球は、手前にある球のうちこの数から選ぶ（奥の球だと手前の球が邪魔をする）
+        this.CAMERA_REST_RATIO = 1.05;      // 引いたときのカメラの距離（画面の高さ比）
+        this.CAMERA_RECEDE = 0.12;          // 拍のあいだにさらに遠ざかる量（距離に対する比）
+        this.FOV = Math.PI / 3;             // 画角（縦 60°。p5 の既定と同じ）
+        // 房の広がり。中心からこの範囲（画面の幅・高さ・高さに対する比）の中を漂う
+        this.CLOUD_HALF_X = 0.38;
+        this.CLOUD_HALF_Y = 0.3;
+        this.CLOUD_HALF_Z = 0.3;
+        this.WANDER_SPEED = 0.05;           // 漂う速さ（画面の高さ/秒）
+        this.WANDER_TURN = 1.5;             // 漂う向きの変わりやすさ（/秒）
+        this.CLOUD_PULL = 3;                // 範囲の外に出た分を戻す力（/秒²）
+        this.CLOSE_WEIGHT_MAX = 3;          // 寄ったときの線の太さの上限（LINE_WEIGHT の何倍か）
+
+        // **裏側の線も透かす**（2026-11-01 本人が元映像に合わせて選び直した。以前は「透けない方で」だった）。
+        // true にすると、線の少し内側に地の色の球を描いて奥の線を隠す
+        this.HIDE_BACK_LINES = false;
 
         // ---- 球の数と大きさ ----
         // 大きさは最大〜最小のあいだに等間隔で振る（大小ばらばら）。どちらも画面の短辺に対する比率。
@@ -38,7 +82,8 @@ class Scene03 extends BaseScene {
         // ---- 真ん中に寄せる ----
         // **画面の中央（幅の CENTER_ZONE_RATIO × 2）の中は自由に動き、外へ出た球だけを
         // ゆるいバネで中央へ戻す。**見えない壁に跳ね返すと不自然なので、力でじわっと戻す
-        this.CENTER_ZONE_RATIO = 0.2;       // 中央から左右にこの割合（画面の幅比）までは力を掛けない
+        // 元映像の引きの画は球が画面全体に散らばっていたので広めにした（2026-11-01。前は 0.2）
+        this.CENTER_ZONE_RATIO = 0.32;      // 中央から左右にこの割合（画面の幅比）までは力を掛けない
         this.CENTER_PULL = 8;               // 外に出た分に掛ける戻す力（/秒²）。大きいほど早く戻る（約2秒で往復する強さ）
 
         // ---- 見た目: 三角形の網目（ジオデシック球）----
@@ -47,8 +92,6 @@ class Scene03 extends BaseScene {
         // 2 で三角形 80 枚・辺 120 本。3 にすると 180 枚・270 本で細かくなる
         this.GEODESIC_FREQUENCY = 2;
         this.ARC_SEGMENTS = 4;              // 1本の辺を何分割の折れ線で描くか。球面に沿って曲がって見える
-        this.LINE_COLOR = 255;
-        this.BG_COLOR = 0;
         this.START_SPIN_MAX = 1.0;          // 最初に持たせる回転の速さの上限（rad/秒）。向きはばらばら
 
         // ---- 線 ----
@@ -71,16 +114,20 @@ class Scene03 extends BaseScene {
         this.OCCLUDER_DETAIL_Y = 24;
 
         // ---- 鼓動（毎拍。全部の球がそろって）----
-        // 倍率 = 1 + PULSE_AMOUNT × (1 − 拍の中の位置)^PULSE_SHARPNESS。拍の頭で最大、すっと戻る
-        this.PULSE_AMOUNT = 0.16;           // 拍の頭でふくらむ量（半径の 16%。1拍目は ×1.6 で 26%）
-        this.PULSE_SHARPNESS = 3;           // 大きいほど一瞬でしぼむ
-        this.DOWNBEAT_ACCENT = 1.6;         // 1拍目だけ強くする倍率（メトロノームの1拍目）。1 で全拍同じ
+        // 拍の頭から PULSE_ATTACK のあいだになめらかにふくらみ、残りでゆっくりしぼむ。
+        // 2026-11-03 本人「鼓動が大きすぎる、もう少し自然に」で、量を 16%→6% に下げ、
+        // 拍の頭で一瞬で最大に跳ぶ形（不自然なカクつき）をやめた
+        this.PULSE_AMOUNT = 0.06;           // ふくらむ量（半径の 6%。1拍目は ×1.25 で 7.5%）
+        this.PULSE_ATTACK = 0.12;           // ふくらみきるまで（拍の長さ比）
+        this.PULSE_SHARPNESS = 2;           // しぼみ方。大きいほど早くしぼむ
+        this.DOWNBEAT_ACCENT = 1.25;        // 1拍目だけ強くする倍率（メトロノームの1拍目）。1 で全拍同じ
 
         // ---- バウンド（ふわふわ）----
         // **風船のようにふわっと漂う**（2026-11-01 本人「もう少しふわふわしている」）。
         // 重力を月（画面の高さを 2m とみなして 0.81 画面/秒²）より弱くし、空気の抵抗を足してある。
         // 抵抗があると落ちる速さに上限ができ（重力 ÷ 抵抗 = 0.375 画面/秒）、ゆっくり降りてくる
-        this.GRAVITY_RATIO = 0.3;           // 重力。画面の高さ/秒²（月の設定のときは 0.81）
+        // 元映像の引きの画は球が上のほうまで散らばっていたので、さらに弱くした（2026-11-01。前は 0.3）
+        this.GRAVITY_RATIO = 0.15;          // 重力。画面の高さ/秒²（月の設定のときは 0.81）
         this.AIR_DRAG = 0.8;                // 空気の抵抗（/秒）。速さに比例してブレーキが掛かる
         this.SPIN_DRAG = 0.3;               // 空気による回転のブレーキ（/秒）
         this.FLOOR_RESTITUTION = 0.55;      // 床の反発。低いほど跳ねない
@@ -104,10 +151,10 @@ class Scene03 extends BaseScene {
         this.ROLL_DAMPING = 0.8;            // 転がりの抵抗。床にいる間、速さと回転が一緒に落ちる（/秒）
 
         // ---- 跳ね上げ（小節の頭）----
-        this.KICK_THRESHOLD_RATIO = 0.15;   // 到達できる高さがこれ未満になった球を、次の小節の頭で跳ね上げる
+        this.KICK_THRESHOLD_RATIO = 0.3;    // 到達できる高さがこれ未満になった球を、次の小節の頭で跳ね上げる（前は 0.15）
         // 跳ね上げる高さ。床から天井までに対する比率。高めにして群れが画面の上のほうまで漂うようにする
-        this.KICK_HEIGHT_MIN = 0.6;
-        this.KICK_HEIGHT_MAX = 0.9;
+        this.KICK_HEIGHT_MIN = 0.7;         // 前は 0.6〜0.9
+        this.KICK_HEIGHT_MAX = 1.0;
         this.SIDE_SPEED_MIN = 0.10;         // 横の速さ。画面の幅に対する比率（/秒）
         this.SIDE_SPEED_MAX = 0.30;
         // 1小節に跳ね上げる球の上限。勢いの落ちている順に選ぶ。
@@ -124,6 +171,8 @@ class Scene03 extends BaseScene {
         this.balls = [];
         this.lastMs = null;
         this.lastBar = null;                // 前のフレームの小節番号。変わった瞬間が小節の頭
+        this.lastBeat = null;               // 前のフレームの拍の番号。変わった瞬間に寄る球を選び直す
+        this.focus = null;                  // カメラが寄る球
     }
 
     setup() {
@@ -135,48 +184,111 @@ class Scene03 extends BaseScene {
 
         this._createBalls();
 
-        // 正投影。**遠近があると手前側が大きく写り、壁に当たる位置と見た目がずれる**。
-        // 奥へ並べた球が全部映るよう、奥行きの範囲（far）を球の並びの深さぶん広げる
+        // 床で跳ねるときの正投影の奥行きの範囲（far）。奥へ並べた球が全部映るよう、球の並びの深さぶん広げる
         const eyeZ = (this.pg.height / 2) / Math.tan(Math.PI / 6);     // p5 の既定のカメラの位置
         const deepest = Math.min(...this.balls.map((ball) => ball.z - ball.radius * this._maxPulse()));
-        this.pg.ortho(-this.pg.width / 2, this.pg.width / 2, -this.pg.height / 2, this.pg.height / 2,
-            0, eyeZ - deepest + 100);
+        this.orthoFar = eyeZ - deepest + 100;
     }
 
     draw(spectrum) {
-        this._updatePhysics();
+        const punch = this.motionIndex === 0;
+        if (punch) this._updateCloud();
+        else this._updatePhysics();
 
         const pulse = this._pulse();
 
-        this.pg.background(this.BG_COLOR);
+        const scheme = this.COLOR_SCHEMES[this.modeIndex];
+        this.pg.background(scheme.bg);
+
+        const eye = punch ? this._punchCamera(pulse) : this._flatCamera();
 
         for (const ball of this.balls) {
             const [angle, axis] = this._quatToAxisAngle(ball.q);
 
-            // WEBGL の原点は画面の中心。物理は左上原点で計算しているので、ここでずらす
+            // カメラが寄るときは房の中の位置（原点が房の中心）。
+            // 床で跳ねるときは、物理を左上原点で計算しているので、WEBGL の原点（画面の中心）へずらす
+            const position = punch
+                ? [ball.cloud.x, ball.cloud.y, ball.cloud.z]
+                : [ball.x - this.pg.width / 2, ball.y - this.pg.height / 2, ball.z];
+
             this.pg.push();
-            this.pg.translate(ball.x - this.pg.width / 2, ball.y - this.pg.height / 2, ball.z);
+            this.pg.translate(...position);
             if (angle > 0) this.pg.rotate(angle, axis);
             this.pg.scale(ball.radius * pulse);
 
-            // 先に黒い球を描いて、奥にある線を深度で隠す
-            this.pg.noStroke();
-            this.pg.fill(this.BG_COLOR);
-            this.pg.sphere(this.OCCLUDER_RATIO, this.OCCLUDER_DETAIL_X, this.OCCLUDER_DETAIL_Y);
+            // 裏側の線を隠すときは、先に地の色の球を描いて、奥にある線を深度で隠す
+            if (this.HIDE_BACK_LINES) {
+                this.pg.noStroke();
+                this.pg.fill(scheme.bg);
+                this.pg.sphere(this.OCCLUDER_RATIO, this.OCCLUDER_DETAIL_X, this.OCCLUDER_DETAIL_Y);
+            }
 
-            // にじみ（太くて薄い線）→ 芯（細い線）の順に重ねる。小さい球ほど暗い（奥にあるように見せる）
+            // にじみ（太くて薄い線）→ 芯（細い線）の順に重ねる。小さい球ほど地の色に寄せる（奥にあるように見せる）
             this.pg.noFill();
-            const tone = this.LINE_COLOR * ball.brightness;
+            const tone = scheme.bg + (scheme.line - scheme.bg) * ball.brightness;
             for (const weight of this.GLOW_WEIGHTS) {
                 this.pg.stroke(tone, this.GLOW_ALPHA);
                 this.pg.strokeWeight(weight);
                 this.pg.model(this.globe);
             }
             this.pg.stroke(tone);
-            this.pg.strokeWeight(this.LINE_WEIGHT);
+            this.pg.strokeWeight(this.LINE_WEIGHT * (punch ? this._closeWeight(position, eye) : 1));
             this.pg.model(this.globe);
             this.pg.pop();
         }
+    }
+
+    keyPressed(key) {
+        if (this.handleModeKey(key)) return;
+        if (String(key).toUpperCase() === 'D') {
+            this.motionIndex = (this.motionIndex + 1) % this.MOTION_LABELS.length;
+            this.lastMs = null;     // 切り替えた直後に、止まっていた側の時間がまとめて進まないように
+        }
+    }
+
+    // ---- カメラ ----
+
+    // カメラが寄る（元映像の動き）。拍の頭で寄る球の目の前、そこから拍の PUNCH_RELEASE 割までに
+    // 房全体が見える位置へ引き、次の拍までさらにゆっくり遠ざかる。戻り値はカメラの位置
+    _punchCamera(pulse) {
+        const w = this.pg.width;
+        const h = this.pg.height;
+        const phase = this.beatPhase();
+        const t = Math.min(1, phase / this.PUNCH_RELEASE);
+        const away = t * t * (3 - 2 * t);       // 0 = 寄りきり、1 = 引ききり
+
+        // 見る先は寄る球 → 房の中心。カメラはその真正面（手前）
+        const f = this.focus.cloud;
+        const target = [f.x * (1 - away), f.y * (1 - away), f.z * (1 - away)];
+
+        // 距離は対数でつなぐ。**写る大きさは距離に反比例する**ので、まっすぐつなぐと
+        // 引き始めの一瞬で球が小さくなってしまう
+        const closeDistance = this.focus.radius * pulse * this.PUNCH_DISTANCE;
+        const restDistance = h * this.CAMERA_REST_RATIO * (1 + this.CAMERA_RECEDE * phase);
+        const distance = closeDistance * Math.pow(restDistance / closeDistance, away);
+        const eye = [target[0], target[1], target[2] + distance];
+
+        // **遠近を付けた投影にすると、p5 は線の太さを距離で変えない**（cameraType が既定でなくなるため）。
+        // 太さは _closeWeight() で自分で決める
+        this.pg.perspective(this.FOV, w / h, h * 0.01, h * 20);
+        this.pg.camera(eye[0], eye[1], eye[2], target[0], target[1], target[2], 0, 1, 0);
+        return eye;
+    }
+
+    // 床で跳ねる。正投影。**遠近があると手前側が大きく写り、壁に当たる位置と見た目がずれる**
+    _flatCamera() {
+        const w = this.pg.width;
+        const h = this.pg.height;
+        this.pg.camera();
+        this.pg.ortho(-w / 2, w / 2, -h / 2, h / 2, 0, this.orthoFar);
+        return null;
+    }
+
+    // 近い球ほど線を太くする（遠近の分の平方根。寄ったときに線が髪の毛のように細くならないように）
+    _closeWeight(position, eye) {
+        const distance = Math.hypot(position[0] - eye[0], position[1] - eye[1], position[2] - eye[2]);
+        const ratio = Math.sqrt(this.pg.height * this.CAMERA_REST_RATIO / Math.max(distance, 1));
+        return Math.min(this.CLOSE_WEIGHT_MAX, Math.max(1, ratio));
     }
 
     // ---- 見た目 ----
@@ -249,10 +361,19 @@ class Scene03 extends BaseScene {
         }
     }
 
-    // 拍の頭で最大、次の拍までにすっと戻る。1拍目だけ強い。全部の球で同じ値を使う
+    // 拍の頭からなめらかにふくらみ、次の拍までにゆっくり戻る。1拍目だけ強い。全部の球で同じ値を使う
     _pulse() {
         const accent = this.beatInBar() === 0 ? this.DOWNBEAT_ACCENT : 1;
-        return 1 + this.PULSE_AMOUNT * accent * Math.pow(1 - this.beatPhase(), this.PULSE_SHARPNESS);
+        const phase = this.beatPhase();
+        let envelope;
+        if (phase < this.PULSE_ATTACK) {
+            envelope = Math.sin((phase / this.PULSE_ATTACK) * Math.PI / 2);     // 0 → 1 を角なしで
+        } else {
+            const t = (phase - this.PULSE_ATTACK) / (1 - this.PULSE_ATTACK);
+            const eased = t * t * (3 - 2 * t);                                  // smoothstep。戻りきる所も角なし
+            envelope = Math.pow(1 - eased, this.PULSE_SHARPNESS);
+        }
+        return 1 + this.PULSE_AMOUNT * accent * envelope;
     }
 
     // 鼓動でいちばんふくらんだときの倍率（1拍目の頭）
@@ -292,6 +413,13 @@ class Scene03 extends BaseScene {
                 w: this._randomSpin(),
                 // 向きはばらばら（三角形の網目に上下は無いので、どの向きから始めてもよい）
                 q: this._quatFromAxisAngle(this._randomAxis(), Math.random() * Math.PI * 2),
+                // カメラが寄るときの房の中の位置（原点が房の中心のピクセル。z は手前が正）と、漂う向き
+                cloud: {
+                    x: (Math.random() * 2 - 1) * this.pg.width * this.CLOUD_HALF_X,
+                    y: (Math.random() * 2 - 1) * this.pg.height * this.CLOUD_HALF_Y,
+                    z: (Math.random() * 2 - 1) * this.pg.height * this.CLOUD_HALF_Z,
+                    direction: this._randomAxis(),
+                },
             };
             this.balls.push(ball);
         }
@@ -312,7 +440,54 @@ class Scene03 extends BaseScene {
         return this._normalize([Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1]);
     }
 
-    // ---- 動き ----
+    // ---- 動き（カメラが寄る）----
+
+    // 房の中をふわふわ漂わせ、回す。拍が変わった瞬間に、次に寄る球を選び直す
+    _updateCloud() {
+        const now = performance.now();
+        const dt = this.lastMs === null ? 0 : Math.min((now - this.lastMs) / 1000, this.MAX_DT);
+        this.lastMs = now;
+
+        const beat = Math.floor(this.beats());
+        if (this.focus === null || beat !== this.lastBeat) this._chooseFocus();
+        this.lastBeat = beat;
+
+        const speed = this.WANDER_SPEED * this.pg.height;
+        const halves = [
+            this.pg.width * this.CLOUD_HALF_X,
+            this.pg.height * this.CLOUD_HALF_Y,
+            this.pg.height * this.CLOUD_HALF_Z,
+        ];
+        for (const ball of this.balls) {
+            const c = ball.cloud;
+            const position = [c.x, c.y, c.z];
+
+            // 向きを少しずつランダムに変える。範囲の外に出ている軸は、中へ向けて曲げる
+            const turn = this._randomAxis().map((v) => v * this.WANDER_TURN * dt);
+            const direction = c.direction.map((v, i) => {
+                const excess = Math.abs(position[i]) - halves[i];
+                const pull = excess > 0 ? -Math.sign(position[i]) * this.CLOUD_PULL * dt : 0;
+                return v + turn[i] + pull;
+            });
+            c.direction = this._normalize(direction);
+
+            c.x += c.direction[0] * speed * dt;
+            c.y += c.direction[1] * speed * dt;
+            c.z += c.direction[2] * speed * dt;
+            this._rotate(ball, dt);
+        }
+    }
+
+    // 手前にある FOCUS_CANDIDATES 個から、前と違う球を選ぶ
+    _chooseFocus() {
+        const front = [...this.balls]
+            .sort((a, b) => b.cloud.z - a.cloud.z)
+            .slice(0, this.FOCUS_CANDIDATES)
+            .filter((ball) => ball !== this.focus);
+        this.focus = front[Math.floor(Math.random() * front.length)];
+    }
+
+    // ---- 動き（床で跳ねる）----
 
     _gravity() {
         return this.GRAVITY_RATIO * this.pg.height;     // ピクセル/秒²

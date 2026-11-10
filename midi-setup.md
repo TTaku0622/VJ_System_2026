@@ -53,6 +53,7 @@ APC40 MkII ──USB──> Chrome（Web MIDI）
 | SCENE LAUNCH 1〜5 | 横一列をまとめて出す |
 | CLIP STOP / TRACK SELECTION / ACTIVATOR / SOLO / RECORD ARM（列1〜3） | 空にする / 選ぶ / バイパス / ソロ / 合成モード |
 | フェーダー1〜3 / MASTER FADER | 不透明度 / 出力全体の明るさ |
+| ACTIVATOR 4（0x32 ch4） | 三角形で切り抜く ON/OFF（点灯 = ON。2026-11-01〜） |
 | TAP TEMPO（0x63）/ NUDGE −・＋（0x64・0x65） | タップテンポ / 拍を遅らせる・早める（2026-10-31〜） |
 | METRONOME（0x5A） | 拍の頭をそろえる（押した瞬間を小節の1拍目に。BPM は変えない） |
 | TEMPO つまみ（CC 0x0D） | BPM ±1。**回した量だけを送る**（1〜63 が＋、127〜64 が −）ので `encoders` 表で受ける。学習の対象外 |

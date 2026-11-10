@@ -8,6 +8,14 @@ let statusBus = new StatusBus();    // 操作ウィンドウ（control.html）�
 let midiManager = new MidiManager(); // MIDI コントローラー（js/midiMap.js の対応表でキーに翻訳）
 let cameraShader;                   // Scene06（カメラ）が使うシーン内シェーダー
 let fluidShader;                    // Scene08（流体）が使うシーン内シェーダー
+let sparkleShader;                  // Scene10（光の粒）が使うシーン内シェーダー
+let trianglesShader;                // Scene12（入れ子の三角形）が使うシーン内シェーダー
+let shardsShader;                   // Scene13（破片）が使うシーン内シェーダー
+let kaleidoShader;                  // Scene15（万華鏡）が使うシーン内シェーダー
+let raysShader;                     // Scene27（放射）が使うシーン内シェーダー
+let halftoneShader;                 // Scene24（網点）が使うシーン内シェーダー
+let moireShader;                    // Scene21（モアレ）が使うシーン内シェーダー
+let glitchShader;                   // Scene16（グリッチ）が使うシーン内シェーダー
 
 // Shift ＋ 矢印 → テンポの命令
 const TEMPO_ARROW_COMMANDS = {
@@ -23,23 +31,55 @@ function preload() {
     sceneManager.loadPostShader("shader/main.vert", "shader/main.frag");
     cameraShader = loadShader("shader/main.vert", "shader/camera.frag");
     fluidShader = loadShader("shader/main.vert", "shader/fluid.frag");
+    sparkleShader = loadShader("shader/main.vert", "shader/sparkle.frag");
+    trianglesShader = loadShader("shader/main.vert", "shader/triangles.frag");
+    shardsShader = loadShader("shader/main.vert", "shader/shards.frag");
+    kaleidoShader = loadShader("shader/main.vert", "shader/kaleido.frag");
+    glitchShader = loadShader("shader/main.vert", "shader/glitch.frag");
+    moireShader = loadShader("shader/main.vert", "shader/moire.frag");
+    halftoneShader = loadShader("shader/main.vert", "shader/halftone.frag");
+    raysShader = loadShader("shader/main.vert", "shader/rays.frag");
 }
 
 function setup() {
     createCanvas(windowWidth, windowHeight, WEBGL);
     noCursor();
 
-    // ここにシーンを登録する。2つ目の引数がそのシーンを出すキー（'1'〜'9' '0'）。
-    // **キーは登録順ではなく各シーンの番号に固定している。**シーンを消しても残りのキー・
-    // デッキ・MIDI の表がずれないように（5 は 2026-11-01 にシーンを消して空き）
+    // ここにシーンを登録する。2つ目の引数がそのシーンの名前。
+    // **名前は登録順ではなく固定している。**シーンを消しても残りのキー・デッキ・MIDI の表がずれないように。
+    // '1'〜'9' '0' はそのまま数字キーで出せる。数字キーは10個しかないので、それ以外のシーンは
+    // 2文字以上の名前で登録し、デッキ（APC40）か操作画面から出す
     sceneManager.addScene(new Scene01(), '1');
     sceneManager.addScene(new Scene02(), '2');
     sceneManager.addScene(new Scene03(), '3');
     sceneManager.addScene(new Scene04(), '4');
+    sceneManager.addScene(new Scene05(), '5');
     sceneManager.addScene(new Scene06(cameraShader), '6');
     sceneManager.addScene(new Scene07(), '7');
     sceneManager.addScene(new Scene08(fluidShader), '8');
     sceneManager.addScene(new Scene09(), '9');
+    sceneManager.addScene(new Scene10(sparkleShader), '0');
+
+    // サカナクション「ミュージック」の場面から作ったシーン（数字キーなし）
+    sceneManager.addScene(new Scene11(), 'chevron');
+    sceneManager.addScene(new Scene12(trianglesShader), 'triangles');
+    sceneManager.addScene(new Scene13(shardsShader), 'shards');
+    sceneManager.addScene(new Scene14(), 'rednet');
+
+    // VJ の定番から作ったシーン（数字キーなし）
+    sceneManager.addScene(new Scene15(kaleidoShader), 'kaleido');
+    sceneManager.addScene(new Scene16(glitchShader), 'glitch');
+    sceneManager.addScene(new Scene17(), 'terrain');
+    sceneManager.addScene(new Scene18(), 'cubes');
+    sceneManager.addScene(new Scene19(), 'noise');
+    sceneManager.addScene(new Scene20(), 'scope');
+    sceneManager.addScene(new Scene21(moireShader), 'moire');
+    sceneManager.addScene(new Scene22(), 'truchet');
+    sceneManager.addScene(new Scene23(), 'particles');
+    sceneManager.addScene(new Scene24(halftoneShader), 'halftone');
+    sceneManager.addScene(new Scene25(), 'solids');
+    sceneManager.addScene(new Scene26(), 'type');
+    sceneManager.addScene(new Scene27(raysShader), 'rays');
 
     sceneManager.setup(tempoManager);   // 切替フェードの長さを拍で数えるのに使う
     audioManager.setup();

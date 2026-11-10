@@ -67,7 +67,7 @@
     <!-- MIDI 学習モードの案内。midiManager が中身を書き換える -->
     <div id="midi-learn"></div>
 
-    <div id="help">[SCENE]  1 2 3 4 6 7 8 9 : 選択中のレイヤーにシーンを載せる（5 は空き）
+    <div id="help">[SCENE]  1..9,0 : 選択中のレイヤーにシーンを載せる（数字キーの無いシーンは APC40 か操作画面のデッキから）
 [LAYER]  ← →   : 操作するレイヤーを選ぶ（1〜3）
 [LAYER]  ↑ ↓   : 選択中のレイヤーの不透明度 ＋/−
 [LAYER]  [     : 合成モードを循環（通常 / 加算 / スクリーン / 乗算）
@@ -79,6 +79,7 @@
 [TILE]   L K , : 2分割 / 4分割 / 16分割（同キーで解除）
 [FX]     B V   : ミラー（上下左右 / 左右）※排他
 [FX]     N M   : モザイク（粗 / 細）※排他
+[FX]     Y     : 三角形で切り抜く（ピラミッド型の画面。APC40 は ACTIVATOR 4）
 [AUDIO]  SPACE : 再生 / 一時停止（マイク時は音声の開始）
 [AUDIO]  I     : 音声入力を ファイル ↔ マイク で切替（既定はマイク）
 [MIDI]   グリッド列1〜3 : レイヤー1〜3 にシーンを出す / SCENE LAUNCH : 横一列をまとめて
@@ -91,7 +92,26 @@
 [VIEW]   ENTER : フルスクリーン
 
 --- Scene03 鼓動する地球儀 ---
-[GLOBE]  キー無し : 三角形の網目の球 20 個が毎拍ふくらむ・ふわふわ漂う・真ん中に集まる・小節の頭で最大10個を跳ね上げる
+[GLOBE]  A S   : 黒地に白線 / 白地に黒線（反転）
+[GLOBE]  D     : 動き 切替（カメラが毎拍1つの球へ寄って引く / 床で跳ねる）
+
+--- Scene05 ストリングアート ---
+[STRING] A S D F G H : 自動 / 塔 / 目 / アーチ / 網 / 放射（線が滑って移る）
+
+--- Scene10 光の粒（0）---
+[SPARK]  A S D : きらめき / しずく / 山形
+
+--- 入れ子の山形（chevron）/ 入れ子の三角形（triangles）/ 破片（shards）---
+[MUSIC]  A S   : 上へ / 下へ ・ 外へ / 内へ ・ 白と青紫 / ピンクも
+[MUSIC]  赤い線の網（rednet）はキーなし
+
+--- VJ の定番（デッキ6段目〜は操作画面から。ノイズは L2 の5段目）---
+[NOISE]  A S   : 縦線のノイズ（noise）  黒地に白 / 白地に黒
+[CLASSIC] A S  : 万華鏡 色/白黒 ・ グリッチ カラーバー/白黒 ・ 地形 ネオン/白黒
+[CLASSIC] A S  : 立方体 白線/塗り ・ オシロスコープ 白/緑
+[CLASSIC] A S  : モアレ 同心円/直線 ・ 迷路タイル 円弧/斜線 ・ パーティクル 流れ/放射
+[CLASSIC] A S  : 網点 波紋/雲 ・ 多面体 入れ子/群れ ・ 文字 1語ずつ/流れる帯（言葉は scene26.js の WORDS）
+[CLASSIC] A S  : 放射 放射/渦巻き
 
 --- Scene04 スペクトル同心シェイプ ---
 [SPEC]   T     : 円 ↔ 三角
@@ -129,10 +149,29 @@
     <script src="js/scenes/scene02.js"></script>
     <script src="js/scenes/scene03.js"></script>
     <script src="js/scenes/scene04.js"></script>
+    <script src="js/scenes/scene05.js"></script>
     <script src="js/scenes/scene06.js"></script>
     <script src="js/scenes/scene07.js"></script>
     <script src="js/scenes/scene08.js"></script>
     <script src="js/scenes/scene09.js"></script>
+    <script src="js/scenes/scene10.js"></script>
+    <script src="js/scenes/scene11.js"></script>
+    <script src="js/scenes/scene12.js"></script>
+    <script src="js/scenes/scene13.js"></script>
+    <script src="js/scenes/scene14.js"></script>
+    <script src="js/scenes/scene15.js"></script>
+    <script src="js/scenes/scene16.js"></script>
+    <script src="js/scenes/scene17.js"></script>
+    <script src="js/scenes/scene18.js"></script>
+    <script src="js/scenes/scene19.js"></script>
+    <script src="js/scenes/scene20.js"></script>
+    <script src="js/scenes/scene21.js"></script>
+    <script src="js/scenes/scene22.js"></script>
+    <script src="js/scenes/scene23.js"></script>
+    <script src="js/scenes/scene24.js"></script>
+    <script src="js/scenes/scene25.js"></script>
+    <script src="js/scenes/scene26.js"></script>
+    <script src="js/scenes/scene27.js"></script>
     <script src="js/sketch.js"></script>
 </body>
 

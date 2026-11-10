@@ -20,6 +20,9 @@ class SceneManager {
             V: { name: 'VEffect', enabled: false },
             N: { name: 'NEffect', enabled: false },
             M: { name: 'MEffect', enabled: false },
+            // 三角形で切り抜く（サカナクション「ミュージック」のピラミッド型の画面を再現する）。
+            // どのシーンにも掛かる。形は main.frag の TRI_ 定数
+            Y: { name: 'YEffect', enabled: false },
         };
 
         // 同時に有効にしないエフェクトの組み合わせ
@@ -47,15 +50,20 @@ class SceneManager {
         // 全シーンが背景を不透明に塗っているので、通常のままだと下のレイヤーが見えない
         this.DEFAULT_BLENDS = [0, 0, 1];
 
-        // 各レイヤーで出せるシーン（Resolume のクリップの並び）。値はシーン切替キー、null は空き。
+        // 各レイヤーで出せるシーン（Resolume のクリップの並び）。値はシーンの名前（addScene の
+        // 2つ目の引数。数字キーのシーンは '1' など、それ以外は 'chevron' など）、null は空き。
         // **MIDI グリッドの列1〜3 がそのままこの表になる**（上の段から順）。
-        // SCENE LAUNCH ボタンは横一列（同じ段）をまとめて出す
-        // レイヤー1 の2段目の空きは Scene05（トンネル）を消した跡（2026-11-01）。
-        // ほかのシーンのパッドの位置を変えないよう、詰めずに空けてある
+        // SCENE LAUNCH ボタンは横一列（同じ段）をまとめて出す。
+        // サカナクション「ミュージック」の場面から作ったシーン（2026-11-01）は、背景になるものを
+        // レイヤー1・2、白い線だけのものを加算のレイヤー3 に置いた。
+        // **6段目から下は APC40 に無い段**（グリッドは5段）。操作画面のデッキをクリックして出す。
+        // VJ の定番から作ったシーン（2026-11-10）は、本人が頼んだ縦線のノイズだけ APC40 で押せる
+        // 空き（レイヤー2 の5段目）に入れ、残りは6段目から下に置いた。
+        // 背景になる色のあるものはレイヤー1・2、黒地に白線のものは加算のレイヤー3
         this.deck = [
-            ['8', null, '7', '2', '1'],         // レイヤー1  背景（流体 / 空き / 格子 / 黒 / 白）
-            ['6', null, null, null, null],      // レイヤー2  カメラ
-            ['9', '3', '4', null, null],        // レイヤー3  上に乗せる線画（白線 / 地球儀 / 同心）
+            ['8', '0', '7', '2', '1', 'terrain', 'kaleido', 'particles', 'rays'],   // レイヤー1  背景（流体 / 光の粒 / 格子 / 黒 / 白 ‖ 地形 / 万華鏡 / パーティクル / 放射）
+            ['6', 'triangles', 'shards', 'rednet', 'noise', 'glitch', 'moire', 'halftone', 'type'],    // レイヤー2  カメラ / 入れ子の三角形 / 破片 / 赤い線の網 / 縦線のノイズ ‖ グリッチ / モアレ / 網点 / 文字
+            ['9', '3', '4', 'chevron', '5', 'cubes', 'scope', 'truchet', 'solids'],     // レイヤー3  線画（白線 / 地球儀 / 同心 / 山形 / ストリングアート ‖ 立方体 / オシロ / 迷路タイル / 多面体）
         ];
 
         this.layers = [];
@@ -126,11 +134,13 @@ class SceneManager {
             });
         });
 
-        // シーン切替キー → 登録順。addScene() で埋まる（例 { '1': 0, '2': 1, '4': 2, ... }）。
-        // **キーは登録順ではなく、登録時に渡したキー**。シーンを消しても残りのキーがずれない
+        // シーンの名前 → 登録順。addScene() で埋まる（例 { '1': 0, '2': 1, 'chevron': 8, ... }）。
+        // **名前は登録順ではなく、登録時に渡したもの**。シーンを消しても残りがずれない。
+        // 数字1文字の名前はそのままキーボードの数字キーで出せる。数字キーは10個しかないので、
+        // それ以外のシーンは2文字以上の名前で登録し、デッキ（APC40）か操作画面から出す
         this.SCENE_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
         this.sceneKeyMap = {};
-        this.sceneKeys = [];        // 登録順 → キー
+        this.sceneKeys = [];        // 登録順 → 名前
     }
 
     // preload() から呼ぶ
@@ -138,15 +148,18 @@ class SceneManager {
         this.postShader = loadShader(vertFilePath, fragFilePath);
     }
 
-    // key はそのシーンを出すキー（'1'〜'9' '0'）。使えないキー・使用済みのキーなら
-    // キー無しで登録する（デッキや数字キーからは出せないが、動作は止めない）
+    // key はそのシーンの名前。'1'〜'9' '0' なら数字キーでも出せる。それ以外は2文字以上の英数字
+    // （1文字だとキーボードの文字キーと区別がつかない。':' は MIDI の命令と区別がつかない）。
+    // 使えない名前・使用済みの名前なら名前無しで登録する（デッキからは出せないが、動作は止めない）
     addScene(scene, key) {
         const index = this.scenes.length;
         this.scenes.push(scene);
 
-        const usable = this.SCENE_KEYS.includes(key) && !(key in this.sceneKeyMap);
+        const valid = this.SCENE_KEYS.includes(key) || /^[A-Za-z0-9_-]{2,}$/.test(String(key));
+        const usable = valid && !(key in this.sceneKeyMap);
         if (!usable) {
-            console.warn(`[scene] ${scene.constructor.name} のキー '${key}' は使えない（'1'〜'9' '0' で、ほかと重ならないもの）`);
+            console.warn(`[scene] ${scene.constructor.name} の名前 '${key}' は使えない`
+                + '（\'1\'〜\'9\' \'0\' か2文字以上の英数字で、ほかと重ならないもの）');
         }
         this.sceneKeys[index] = usable ? key : null;
         if (usable) this.sceneKeyMap[key] = index;

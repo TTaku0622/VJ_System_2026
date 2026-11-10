@@ -43,6 +43,15 @@ uniform bool u_isBEffectEnabled;
 uniform bool u_isVEffectEnabled;
 uniform bool u_isNEffectEnabled;
 uniform bool u_isMEffectEnabled;
+uniform bool u_isYEffectEnabled;    // 三角形で切り抜く（ピラミッド型の画面）
+
+// ---- 三角形の切り抜き（Y）----
+// サカナクション「ミュージック」（SAKANAQUARIUM 2024 "turn"）のステージは画面が三角形だった。
+// 四角いスクリーンでもその見え方を出すため、どのシーンにも掛けられる全体エフェクトにしてある
+const float TRI_TOP = 0.05;         // 頂点の高さ（画面の高さ比。上から）
+const float TRI_BOTTOM = 0.97;      // 底辺の高さ（同じく上から）
+const float TRI_BASE_RATIO = 1.8;   // 底辺の長さ ÷ 三角形の高さ。元映像のピラミッドは底辺が高さの2倍弱
+const float TRI_SOFT_PX = 1.2;      // 縁のぼかし（ピクセル）。0 にすると縁がギザギザになる
 
 // 画面分割
 uniform float u_tileColumns;
@@ -98,6 +107,22 @@ vec2 tileCover(vec2 uv){
     return .5 + (tileUv - .5) * cropScale;
 }
 
+// 三角形の内側なら 1、外なら 0。p は画面の座標（0〜1。y は上から下へ増える）。
+// 斜辺と底辺までの距離のうち近いほうで、縁を TRI_SOFT_PX だけなめらかにする
+float triangleMask(vec2 p){
+    vec2 px = p * u_resolution;
+    float top = TRI_TOP * u_resolution.y;
+    float bottom = TRI_BOTTOM * u_resolution.y;
+    float height = bottom - top;
+    float halfBase = height * TRI_BASE_RATIO * 0.5;
+    float slope = halfBase / height;                    // 高さ 1 進むごとに広がる半幅
+
+    float halfWidth = (px.y - top) * slope;            // その高さでの三角形の半幅
+    float toSide = (halfWidth - abs(px.x - u_resolution.x * 0.5)) / sqrt(1.0 + slope * slope);
+    float toBottom = bottom - px.y;
+    return smoothstep(-TRI_SOFT_PX, TRI_SOFT_PX, min(toSide, toBottom));
+}
+
 // 下の色 base に上の色 top を合成モードで重ねた結果（不透明度 100% のとき）
 vec3 blendColor(vec3 base, vec3 top, int mode){
     if(mode == 1){
@@ -147,6 +172,11 @@ void main(void){
     vec4 col = vec4(mixed, 1.0);
 
     // ---- 色をいじる系のエフェクトはここに追加する ----
+
+    // 三角形の切り抜き。画面の形そのものなので、分割やミラーの後の「画面の位置」で切る
+    if(u_isYEffectEnabled){
+        col.rgb *= triangleMask(vTexCoord);
+    }
 
     // マスター調光。**いちばん最後に掛ける**ので、どのシーン・どのエフェクトでも必ず効く
     col.rgb *= u_brightness;
